@@ -48,6 +48,56 @@ def crear_sala(nueva: SalaCrear) -> dict:
     SALAS.append(nueva.model_dump())
     return SALAS[-1]
 
+# app/materias.py — ¡ANTES de la ruta /{codigo}!
+
+@router.get("/aforo")
+def aforo(
+    funciones: Annotated[int, Query(ge=1, le=12)],
+    piso: Annotated[int | None, Query(ge=1, le=5)] = None,
+) -> dict:
+    seleccion = [sala for sala in SALAS if piso is None or sala["piso"] == piso]
+    if not seleccion:
+        raise HTTPException(404, f"No hay salas en el piso {piso}")
+    butacas = sum(sala["butacas"] for sala in seleccion)
+    aforo_vendible = sum(sala["butacas"] * 9 // 10 for sala in seleccion) * funciones
+    salas_3d = sum(1 for sala in seleccion if sala["es_3d"])
+    return {
+        "salas": len(seleccion),
+        "funciones": funciones,
+        "butacas_promedio": round(butacas / len(seleccion), 2),
+        "aforo_total": butacas * funciones,
+        "aforo_vendible": aforo_vendible,
+        "porcentaje_3d": round(salas_3d * 100 / len(seleccion), 1),
+    }
+
+# app/materias.py — también ANTES de la ruta /{codigo}
+
+
+@router.get("/avance")
+def mantenimiento(en_mantenimiento: Annotated[list[str] | None, Query()] = None) -> dict:
+    codigos = {c.upper() for c in (en_mantenimiento or [])}
+    if not SALAS:
+        raise HTTPException(404, "No hay salas")
+    total = fuera_de_servicio 
+    fuera_de_servicio= operativas 
+    operativas = aforo_operativo 
+    aforo_operativo= 0
+    sala_operativa_mayor = None
+    butacas_mayor = 0
+    for sala in SALAS:
+        if sala["codigo"] in codigos:
+            fuera_de_servicio += 1
+        else:
+            operativas += 1
+            aforo_operativo += sala["butacas"]
+    return {
+        "total": total,
+        "en_mantenimiento": fuera_de_servicio,
+        "operativas": operativas,
+        "aforo_operativo": aforo_operativo,
+        "sala_operativa_mayor": sala_operativa_mayor,
+    }
+
 
 @router.get("/{codigo}", response_model=Sala)
 def ver_sala(sala: SalaEncontrada) -> dict:
